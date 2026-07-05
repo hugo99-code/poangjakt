@@ -164,64 +164,69 @@ const firebaseConfig = {
     appId: "1:106416764516:web:45cc663051ba6431029171"
 };
 
-// --- KORREKT INITIERING FÖR COMPAT-SKRIPTEN ---
+// 1. Din config och initiering (låt stå som det är)
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// Logga in användaren anonymt och säkert i bakgrunden
-firebase.auth().signInAnonymously()
-    .then(() => {
-        console.log("Säker anslutning upprättad anonymt");
-    })
-    .catch((error) => {
-        console.error("Kunde inte upprätta säker anslutning:", error);
-    });
+// 2. Starta den anonyma inloggningen i bakgrunden
+firebase.auth().signInAnonymously().catch((error) => {
+    console.error("Kunde inte upprätta säker anslutning:", error);
+});
 
 let initialLoadDone = false; // Håller koll på om det är första gången appen startar
 
-// 3. Lyssna på databasen i REALTIID
-database.ref('jukola_data').on('value', (snapshot) => {
-    const data = snapshot.val();
-    
-    if (data && data.users) {
-        db_users = data.users; 
-    } else {
-        db_users = []; 
-    }
+// 3. FIXEN: Vänta tills inloggningen är HELT KLAR innan vi rör databasen!
+firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+        console.log("Säker anslutning är redo! Laddar databasen...");
 
-    if (data && data.challenges) {
-        db_challenges = data.challenges;
-    } else {
-        db_challenges = defaultChallenges;
-    }
-    
-    // --- AUTOMATISK INLOGGNING VID START ---
-    if (!initialLoadDone) {
-        const savedSession = JSON.parse(localStorage.getItem("current_session"));
-        if (savedSession) {
-            const foundMe = db_users.find(u => u.username === savedSession.username);
-            if (foundMe) {
-                currentUser = foundMe; // Logga in automatiskt med färsk molndata!
-                showGameView();
+        // HÄR INNE LIGGER DIN ORIGINALKOD NU:
+        database.ref('jukola_data').on('value', (snapshot) => {
+            const data = snapshot.val();
+            
+            if (data && data.users) {
+                db_users = data.users; 
+            } else {
+                db_users = []; 
             }
-        }
-        initialLoadDone = true; // Sätt flaggan till sant så vi inte kastar ut folk från admin-vyn sen!
-    } else if (currentUser) {
-        // Vanlig synk under spelets gång
-        const foundMe = db_users.find(u => u.username === currentUser.username);
-        if (foundMe) {
-            currentUser = foundMe; 
-        }
-    }
 
-    renderLeaderboard();
-    
-    if (currentUser) {
-        renderAllAccordions(true); 
-    }
-    
-    if (document.getElementById("admin-view") && document.getElementById("admin-view").style.display === "block") {
-        renderAdminUsers();
+            if (data && data.challenges) {
+                db_challenges = data.challenges;
+            } else {
+                db_challenges = defaultChallenges;
+            }
+            
+            // --- AUTOMATISK INLOGGNING VID START ---
+            if (!initialLoadDone) {
+                const savedSession = JSON.parse(localStorage.getItem("current_session"));
+                if (savedSession) {
+                    const foundMe = db_users.find(u => u.username === savedSession.username);
+                    if (foundMe) {
+                        currentUser = foundMe; // Logga in automatiskt med färsk molndata!
+                        showGameView();
+                    }
+                }
+                initialLoadDone = true; // Sätt flaggan till sant så vi inte kastar ut folk från admin-vyn sen!
+            } else if (currentUser) {
+                // Vanlig synk under spelets gång
+                const foundMe = db_users.find(u => u.username === currentUser.username);
+                if (foundMe) {
+                    currentUser = foundMe; 
+                }
+            }
+
+            renderLeaderboard();
+            
+            if (currentUser) {
+                renderAllAccordions(true); 
+            }
+            
+            if (document.getElementById("admin-view") && document.getElementById("admin-view").style.display === "block") {
+                renderAdminUsers();
+            }
+        });
+        // SLUT PÅ DIN ORIGINALKOD
+        
     }
 });
 
