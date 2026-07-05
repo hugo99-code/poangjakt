@@ -168,6 +168,15 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
+// Logga in användaren anonymt och säkert i bakgrunden
+firebase.auth().signInAnonymously()
+    .then(() => {
+        console.log("Säker anslutning upprättad anonymt");
+    })
+    .catch((error) => {
+        console.error("Kunde inte upprätta säker anslutning:", error);
+    });
+
 let initialLoadDone = false; // Håller koll på om det är första gången appen startar
 
 // 3. Lyssna på databasen i REALTIID
